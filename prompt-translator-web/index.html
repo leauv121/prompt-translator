@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prompt Translator — 需求转提示词</title>
+<style>
+/* ============================================================
+   CSS Variables & Reset
+   ============================================================ */
+:root {
+  --bg: #fafafa;
+  --bg-card: #ffffff;
+  --bg-input: #f5f5f5;
+  --bg-hover: #f0f0f0;
+  --text: #1a1a1a;
+  --text-secondary: #666;
+  --text-muted: #999;
+  --border: #e5e5e5;
+  --accent: #6c5ce7;
+  --accent-hover: #5a4bd1;
+  --accent-light: #f0edff;
+  --success: #00b894;
+  --warning: #fdcb6e;
+  --danger: #e17055;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 24px rgba(0,0,0,0.12);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --transition: 0.2s ease;
+}
+
+[data-theme="dark"] {
+  --bg: #1a1a2e;
+  --bg-card: #222240;
+  --bg-input: #2a2a4a;
+  --bg-hover: #333355;
+  --text: #e8e8f0;
+  --text-secondary: #a0a0b8;
+  --text-muted: #707088;
+  --border: #3a3a5a;
+  --accent: #a78bfa;
+  --accent-hover: #8b6fe0;
+  --accent-light: #2a2040;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 24px rgba(0,0,0,0.5);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  transition: background var(--transition), color var(--transition);
+}
+
+/* ============================================================
+   Layout
+   ============================================================ */
+.app {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   Header
+   ============================================================ */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.logo {
+  font-size: 1.4rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo .icon { font-size: 1.6rem; }
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  font-family: inherit;
+}
+.btn:hover { background: var(--bg-hover); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-sm { padding: 4px 10px; font-size: 0.8rem; }
+.btn-icon { padding: 8px; border: none; background: transparent; font-size: 1.2rem; }
+.btn-icon:hover { background: var(--bg-hover); }
+
+/* ============================================================
+   Tabs
+   ============================================================ */
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-input);
+  border-radius: var(--radius);
+  padding: 4px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: calc(var(--radius) - 4px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: inherit;
+  text-align: center;
+}
+
+.tab.active {
+  background: var(--bg-card);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+/* ============================================================
+   Main content area
+   ============================================================ */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.panel-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+/* ============================================================
+   AI Chat Mode
+   ============================================================ */
+.chat-area {
+  min-height: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.chat-msg {
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.chat-msg.user {
+  background: var(--accent-light);
+  color: var(--text);
+  align-self: flex-end;
+  max-width: 85%;
+}
+
+.chat-msg.ai {
+  background: var(--bg-input);
+  color: var(--text);
+  align-self: flex-start;
+  max-width: 90%;
+}
+
+.chat-msg.ai pre {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin: 8px 0;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-loading {
+  display: flex;
+  gap: 6px;
+  padding: 12px 16px;
+  align-self: flex-start;
+}
+
+.chat-loading span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.chat-loading span:nth-child(1) { animation-delay: -0.32s; }
+.chat-loading span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 0.95rem;
+  resize: none;
+  font-family: inherit;
+  transition: border-color var(--transition);
+  min-height: 48px;
+  max-height: 120px;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ============================================================
+   Manual SPACES Mode
+   ============================================================ */
+.spaces-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.form-group label .hint {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: border-color var(--transition);
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.form-group textarea { resize: vertical; min-height: 60px; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* ============================================================
+   Output Panel
+   ============================================================ */
+.output-area {
+  position: relative;
+}
+
+.output-content {
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  font-size: 0.9rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+  min-height: 60px;
+  max-height: 400px;
+  overflow-y: auto;
+  color: var(--text);
+}
+
+.output-content:empty::before {
+  content: "生成的提示词将显示在这里...";
+  color: var(--text-muted);
+}
+
+.output-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 10px 24px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 1.7s forwards;
+  z-index: 999;
+  pointer-events: none;
+}
+
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* ============================================================
+   Settings Panel
+   ============================================================ */
+.settings-panel {
+  display: none;
+  flex-shrink: 0;
+}
+
+.settings-panel.open { display: block; }
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.settings-grid .form-group { margin-bottom: 0; }
+
+/* ============================================================
+   History Panel
+   ============================================================ */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.history-item {
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition);
+  font-size: 0.85rem;
+  border: 1px solid transparent;
+}
+
+.history-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border);
+}
+
+.history-item .time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.history-item .preview {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-empty {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px;
+  font-size: 0.9rem;
+}
+
+/* ============================================================
+   Footer
+   ============================================================ */
+.footer {
+  text-align: center;
+  padding: 16px 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 600px) {
+  .app { padding: 12px; }
+  .header { padding: 10px 0; }
+  .logo { font-size: 1.1rem; }
+  .form-row { grid-template-columns: 1fr; }
+  .settings-grid { grid-template-columns: 1fr; }
+  .chat-msg.user { max-width: 95%; }
+  .chat-msg.ai { max-width: 98%; }
+}
+</style>
+</head>
+<body data-theme="light">
+
+<div class="app">
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <span class="icon">🔮</span>
+      <span>Prompt Translator</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-sm" onclick="toggleSettings()" title="设置">⚙️</button>
+      <button class="btn-icon" onclick="toggleTheme()" title="切换主题" id="themeBtn">🌙</button>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('ai')" id="tab-ai">🤖 AI 智能模式</button>
+    <button class="tab" onclick="switchTab('manual')" id="tab-manual">📝 手动引导模式</button>
+    <button class="tab" onclick="switchTab('history')" id="tab-history">📋 历史记录</button>
+  </div>
+
+  <!-- Settings Panel -->
+  <div class="panel settings-panel" id="settingsPanel">
+    <div class="panel-title">⚙️ API 设置</div>
+    <div class="settings-grid">
+      <div class="form-group">
+        <label>模型提供商</label>
+        <select id="modelProvider" onchange="onProviderChange()">
+          <option value="deepseek" selected>DeepSeek</option>
+          <option value="claude">Anthropic Claude</option>
+          <option value="openai">OpenAI (ChatGPT)</option>
+          <option value="gemini">Google Gemini</option>
+          <option value="custom">自定义 (OpenAI 兼容)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>模型名称</label>
+        <input type="text" id="modelName" placeholder="deepseek-chat" value="deepseek-chat">
+      </div>
+      <div class="form-group" id="customUrlGroup" style="display:none;">
+        <label>API 地址</label>
+        <input type="text" id="customApiUrl" placeholder="https://api.deepseek.com/v1/chat/completions">
+      </div>
+      <div class="form-group">
+        <label>API Key</label>
+        <input type="password" id="apiKey" placeholder="sk-...">
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;">
+      <button class="btn btn-primary btn-sm" onclick="saveSettings()">保存设置</button>
+      <button class="btn btn-sm" onclick="testConnection()">测试连接</button>
+      <span style="font-size:0.8rem;color:var(--text-muted);line-height:2.2;">
+        🔒 Key 仅存本地浏览器，不上传任何服务器
+      </span>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <!-- AI Mode -->
+    <div id="aiMode" class="panel" style="flex:1;display:flex;flex-direction:column;">
+      <div class="panel-title">💬 描述你的需求，AI 帮你转化为最佳提示词</div>
+      <div class="chat-area" id="chatArea">
+        <div class="chat-msg ai">
+          你好！直接告诉我你想做什么，我会帮你生成最佳提示词。例如：<br><br>
+          <em>"我需要分析公司Q2销售数据，找出营收增长慢的原因"</em><br><br>
+          你也可以直接粘贴现有 prompt，我帮你优化。
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <textarea class="chat-input" id="chatInput" rows="1"
+          placeholder="描述你的需求..."
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
+        <button class="btn btn-primary" onclick="sendMessage()" id="sendBtn">发送</button>
+      </div>
+      <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;">
+        <button class="btn btn-sm" onclick="quickExample('我需要分析销售数据，找出增长瓶颈')">📊 数据分析</button>
+        <button class="btn btn-sm" onclick="quickExample('帮我写一篇关于远程办公的公众号文章')">✍️ 内容创作</button>
+        <button class="btn btn-sm" onclick="quickExample('我需要做一个竞品分析报告')">📈 竞品分析</button>
+      </div>
+    </div>
+
+    <!-- Manual Mode -->
+    <div id="manualMode" class="panel" style="display:none;">
+      <div class="panel-title">📝 按 SPACES 框架填写，自动拼装成最佳提示词</div>
+      <div class="spaces-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>S — 角色设定 <span class="hint">AI 应该扮演谁？</span></label>
+            <input type="text" id="s_role" placeholder="例如：资深电商数据分析师，有10年经验">
+          </div>
+          <div class="form-group">
+            <label>目标平台 <span class="hint">为哪个 AI 优化？</span></label>
+            <select id="s_platform">
+              <option value="claude">Claude — 详细结构化</option>
+              <option value="chatgpt">ChatGPT — 精炼直接</option>
+              <option value="deepseek">DeepSeek — 步骤推理</option>
+              <option value="gemini">Gemini — 简洁高效</option>
+              <option value="general" selected>通用 — 跨平台兼容</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>P — 任务描述 <span class="hint">具体要做什么？最终要驱动什么决策？</span></label>
+          <textarea id="s_problem" rows="2" placeholder="例如：分析Q3销售数据，判断营收下滑是客流下降还是客单价下降导致的，以便决定下一步策略"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>A — 受众设定 <span class="hint">谁看这个输出？</span></label>
+            <input type="text" id="s_audience" placeholder="例如：面向CEO和CFO，需要结论先行">
+          </div>
+          <div class="form-group">
+            <label>C — 约束条件 <span class="hint">格式/长度/风格/禁止项</span></label>
+            <input type="text" id="s_constraints" placeholder="例如：不要使用专业术语，不超过800字">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>E — 示例参考 <span class="hint">有没有期望的输出样例？</span></label>
+            <textarea id="s_examples" rows="2" placeholder="例如：参考这个格式...&#10;输入：销售原始数据&#10;输出：核心发现 + 数据支撑 + 可执行建议"></textarea>
+          </div>
+          <div class="form-group">
+            <label>S — 输出结构 <span class="hint">期望的回答组织方式</span></label>
+            <textarea id="s_structure" rows="2" placeholder="例如：&#10;1. 核心结论 (2-3句)&#10;2. 关键指标对比 (表格)&#10;3. 归因分析&#10;4. 可执行建议"></textarea>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="generateManual()" style="align-self:flex-start;">🔮 生成提示词</button>
+      </div>
+    </div>
+
+    <!-- History Mode -->
+    <div id="historyMode" class="panel" style="display:none;">
+      <div class="panel-title">📋 历史记录（存于本地浏览器）</div>
+      <div class="history-list" id="historyList"></div>
+      <button class="btn btn-sm" onclick="clearHistory()" style="margin-top:12px;color:var(--danger);">🗑️ 清除全部历史</button>
+    </div>
+
+    <!-- Output Panel -->
+    <div class="panel output-area">
+      <div class="panel-title">📋 生成的提示词</div>
+      <div class="output-content" id="outputContent"></div>
+      <div class="output-actions">
+        <button class="btn btn-primary" onclick="copyOutput()">📋 一键复制</button>
+        <button class="btn btn-sm" onclick="saveToHistory()">💾 保存到历史</button>
+        <button class="btn btn-sm" onclick="clearOutput()">清空</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    Prompt Translator · 需求转最佳提示词 · 开源免费
+  </div>
+</div>
+
+<script>
+// ============================================================
+// State
+// ============================================================
+const STATE = {
+  provider: 'deepseek',
+  model: 'deepseek-chat',
+  apiKey: '',
+  customUrl: '',
+  history: [],
+  currentOutput: '',
+};
+
+// ============================================================
+// Model presets
+// ============================================================
+const PROVIDERS = {
+  deepseek: {
+    name: 'DeepSeek',
+    models: ['deepseek-chat', 'deepseek-reasoner'],
+    defaultModel: 'deepseek-chat',
+    baseUrl: 'https://api.deepseek.com/v1/chat/completions',
+    headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
+    body: (model, messages) => JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 4096 }),
+    parse: (data) => data.choices[0].message.content,
+  },
+  claude: {
+    name: 'Anthropic Claude',
+    models: ['claude-sonnet-4-6', 'claude-opus-4-8', 'claude-haiku-4-5'],
+    defaultModel: 'claude-sonnet-4-6',
+    baseUrl: 'https://api.anthropic.com/v1/messages',
+    headers: (key) => ({ 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }),
+    body: (model, messages) => {
+      // Convert OpenAI-style messages to Anthropic format
+      const systemMsg = messages.find(m => m.role === 'system');
+      const chatMsgs = messages.filter(m => m.role !== 'system');
+      return JSON.stringify({
+        model,
+        max_tokens: 4096,
+        system: systemMsg ? systemMsg.content : '',
+        messages: chatMsgs.map(m => ({ role: m.role, content: m.content })),
+      });
+    },
+    parse: (data) => data.content[0].text,
+  },
+  openai: {
+    name: 'OpenAI',
+    models: ['gpt-4o', 'gpt-4o-mini', 'o3-mini'],
+    defaultModel: 'gpt-4o',
+    baseUrl: 'https://api.openai.com/v1/chat/completions',
+    headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
+    body: (model, messages) => JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 4096 }),
+    parse: (data) => data.choices[0].message.content,
+  },
+  gemini: {
+    name: 'Google Gemini',
+    models: ['gemini-2.5-flash', 'gemini-2.5-pro'],
+    defaultModel: 'gemini-2.5-flash',
+    baseUrl: (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    headers: (key) => ({ 'Content-Type': 'application/json' }),
+    body: (model, messages) => {
+      const systemMsg = messages.find(m => m.role === 'system');
+      const userMsgs = messages.filter(m => m.role !== 'system');
+      const parts = [];
+      if (systemMsg) parts.push({ text: systemMsg.content });
+      userMsgs.forEach(m => parts.push({ text: m.content }));
+      return JSON.stringify({ contents: [{ role: 'user', parts }] });
+    },
+    parse: (data) => data.candidates[0].content.parts[0].text,
+    needsKeyInUrl: true,
+  },
+  custom: {
+    name: '自定义',
+    models: [],
+    defaultModel: '',
+    baseUrl: '',
+    headers: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
+    body: (model, messages) => JSON.stringify({ model, messages, temperature: 0.7, max_tokens: 4096 }),
+    parse: (data) => data.choices[0].message.content,
+  },
+};
+
+// ============================================================
+// Init
+// ============================================================
+function init() {
+  loadSettings();
+  loadHistory();
+  updateThemeBtn();
+}
+
+function loadSettings() {
+  const saved = localStorage.getItem('pt_settings');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      STATE.provider = s.provider || 'deepseek';
+      STATE.model = s.model || 'deepseek-chat';
+      STATE.apiKey = s.apiKey || '';
+      STATE.customUrl = s.customUrl || '';
+    } catch(e) {}
+  }
+  document.getElementById('modelProvider').value = STATE.provider;
+  document.getElementById('modelName').value = STATE.model;
+  document.getElementById('apiKey').value = STATE.apiKey;
+  document.getElementById('customApiUrl').value = STATE.customUrl;
+  onProviderChange();
+}
+
+function saveSettings() {
+  STATE.provider = document.getElementById('modelProvider').value;
+  STATE.model = document.getElementById('modelName').value;
+  STATE.apiKey = document.getElementById('apiKey').value;
+  STATE.customUrl = document.getElementById('customApiUrl').value;
+  localStorage.setItem('pt_settings', JSON.stringify({
+    provider: STATE.provider,
+    model: STATE.model,
+    apiKey: STATE.apiKey,
+    customUrl: STATE.customUrl,
+  }));
+  showToast('✅ 设置已保存');
+  document.getElementById('settingsPanel').classList.remove('open');
+}
+
+function onProviderChange() {
+  const p = document.getElementById('modelProvider').value;
+  const provider = PROVIDERS[p];
+  const modelSelect = document.getElementById('modelName');
+  const customUrlGroup = document.getElementById('customUrlGroup');
+
+  if (p === 'custom') {
+    customUrlGroup.style.display = 'block';
+    modelSelect.placeholder = '输入模型名称...';
+    modelSelect.value = STATE.model || '';
+  } else {
+    customUrlGroup.style.display = 'none';
+    modelSelect.value = provider.defaultModel;
+    modelSelect.placeholder = provider.defaultModel;
+  }
+}
+
+// ============================================================
+// Tabs
+// ============================================================
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('aiMode').style.display = tab === 'ai' ? 'flex' : 'none';
+  document.getElementById('manualMode').style.display = tab === 'manual' ? 'block' : 'none';
+  document.getElementById('historyMode').style.display = tab === 'history' ? 'block' : 'none';
+  if (tab === 'history') renderHistory();
+}
+
+// ============================================================
+// Theme
+// ============================================================
+function toggleTheme() {
+  const body = document.body;
+  const current = body.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  body.setAttribute('data-theme', next);
+  localStorage.setItem('pt_theme', next);
+  updateThemeBtn();
+}
+
+function updateThemeBtn() {
+  const current = document.body.getAttribute('data-theme');
+  document.getElementById('themeBtn').textContent = current === 'dark' ? '☀️' : '🌙';
+}
+
+// Load theme
+(function() {
+  const saved = localStorage.getItem('pt_theme');
+  if (saved) document.body.setAttribute('data-theme', saved);
+})();
+
+// ============================================================
+// Settings Panel
+// ============================================================
+function toggleSettings() {
+  document.getElementById('settingsPanel').classList.toggle('open');
+}
+
+// ============================================================
+// AI Chat Mode
+// ============================================================
+const SYSTEM_PROMPT = `你是一个专业的提示词工程专家。用户会用自然语言描述他们的需求，你要把它们转化为结构化的、高质量的AI提示词。
+
+## 你的任务
+1. 理解用户真正想做什么（不只是表面描述）
+2. 如果信息不足（缺少受众、格式、约束等），先问1-2个关键问题
+3. 如果信息充足，直接生成优化后的提示词
+
+## SPACES 提示词框架
+- S (System/Role): AI 应该扮演什么角色？有什么专业背景？
+- P (Problem/Task): 具体任务是什么？要驱动什么决策？
+- A (Audience): 输出给谁看？他们对话题了解多少？
+- C (Constraints): 格式、长度、风格、禁止事项、不确定时的处理
+- E (Examples): 有没有输入/输出的示例参考？
+- S (Structure): 期望的输出结构是什么？
+
+## 输出格式
+当你生成提示词时，用以下格式：
+
+\`\`\`
+生成的提示词内容...
+\`\`\`
+
+然后简要说明你做了什么优化（可选）。
+
+## 原则
+- 如果用户需求很模糊，先追问再生成
+- 如果用户已经提供了完整信息，直接生成
+- 中文输出，除非用户用英文
+- 提示词要具体、结构化、可执行
+- 面向用户当前选择的AI平台进行优化`;
+
+function quickExample(text) {
+  document.getElementById('chatInput').value = text;
+  document.getElementById('chatInput').focus();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  if (!STATE.apiKey) {
+    showToast('⚠️ 请先在 ⚙️ 设置中填入 API Key');
+    toggleSettings();
+    return;
+  }
+
+  // Add user message to chat
+  appendChat('user', text);
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Show loading
+  const loadingEl = addLoading();
+
+  try {
+    const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: text },
+    ];
+
+    const response = await callAI(messages);
+    removeLoading(loadingEl);
+    appendChat('ai', response);
+
+    // Extract prompt from response and put in output area
+    const extracted = extractPrompt(response);
+    if (extracted) {
+      STATE.currentOutput = extracted;
+      document.getElementById('outputContent').textContent = extracted;
+    }
+  } catch (err) {
+    removeLoading(loadingEl);
+    appendChat('ai', `❌ 出错了：${err.message}\n\n请检查 API Key 和网络连接。`);
+  }
+}
+
+function appendChat(role, text) {
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  div.innerHTML = formatMarkdown(text);
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+function addLoading() {
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'chat-loading';
+  div.id = 'loadingIndicator';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return div;
+}
+
+function removeLoading(el) {
+  if (el && el.parentNode) el.parentNode.removeChild(el);
+}
+
+function extractPrompt(text) {
+  // Try to extract from code blocks
+  const match = text.match(/```[\w]*\n([\s\S]*?)```/);
+  if (match) return match[1].trim();
+
+  // If message looks like a prompt itself (has role assignment structure)
+  if (text.includes('你是') || text.includes('你是一位') || text.includes('You are')) {
+    return text.trim();
+  }
+
+  // Return the whole thing
+  return text.trim();
+}
+
+function formatMarkdown(text) {
+  // Simple markdown to HTML
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+}
+
+// ============================================================
+// API Call
+// ============================================================
+async function callAI(messages) {
+  const provider = PROVIDERS[STATE.provider];
+  let url = provider.baseUrl;
+
+  // Handle Gemini's model-in-URL pattern
+  if (typeof url === 'function') url = url(STATE.model);
+
+  // Handle custom URL
+  if (STATE.provider === 'custom') {
+    url = STATE.customUrl || document.getElementById('customApiUrl').value;
+    if (!url) throw new Error('请填写自定义 API 地址');
+  }
+
+  // Handle Gemini API key in URL
+  if (provider.needsKeyInUrl) {
+    url += `?key=${STATE.apiKey}`;
+  }
+
+  const headers = provider.headers(STATE.apiKey);
+  const body = provider.body(STATE.model, messages);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body,
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    let errMsg = `${response.status} ${response.statusText}`;
+    try {
+      const errJson = JSON.parse(errText);
+      errMsg = errJson.error?.message || errJson.message || errMsg;
+    } catch(e) {}
+    throw new Error(errMsg);
+  }
+
+  const data = await response.json();
+  return provider.parse(data);
+}
+
+async function testConnection() {
+  if (!STATE.apiKey) {
+    showToast('⚠️ 请先填入 API Key');
+    return;
+  }
+  try {
+    const messages = [{ role: 'user', content: '你好，请回复"连接成功"两个字。' }];
+    const result = await callAI(messages);
+    showToast('✅ 连接成功！');
+  } catch (err) {
+    showToast(`❌ 连接失败：${err.message}`);
+  }
+}
+
+// ============================================================
+// Manual SPACES Mode
+// ============================================================
+function generateManual() {
+  const role = document.getElementById('s_role').value.trim();
+  const problem = document.getElementById('s_problem').value.trim();
+  const audience = document.getElementById('s_audience').value.trim();
+  const constraints = document.getElementById('s_constraints').value.trim();
+  const examples = document.getElementById('s_examples').value.trim();
+  const structure = document.getElementById('s_structure').value.trim();
+  const platform = document.getElementById('s_platform').value;
+
+  if (!problem) {
+    showToast('⚠️ 至少需要填写"任务描述"');
+    return;
+  }
+
+  let prompt = '';
+
+  // Build prompt based on platform style
+  switch (platform) {
+    case 'claude':
+      if (role) prompt += `你是${role}。\n\n`;
+      prompt += `请完成以下任务：\n\n${problem}\n`;
+      if (audience) prompt += `\n受众：${audience}\n`;
+      if (structure) prompt += `\n输出结构：\n${structure}\n`;
+      if (constraints) prompt += `\n约束条件：\n${constraints}\n`;
+      if (examples) prompt += `\n参考示例：\n${examples}\n`;
+      break;
+
+    case 'chatgpt':
+      if (role) prompt += `你是${role}。`;
+      prompt += `${problem}`;
+      if (audience) prompt += ` 面向${audience}。`;
+      if (structure) prompt += `\n\n输出格式：\n${structure}`;
+      if (constraints) prompt += `\n\n要求：${constraints}`;
+      if (examples) prompt += `\n\n示例参考：${examples}`;
+      break;
+
+    case 'deepseek':
+      prompt += `请一步一步完成以下任务：\n\n`;
+      if (role) prompt += `角色：${role}\n`;
+      prompt += `任务：${problem}\n`;
+      if (audience) prompt += `受众：${audience}\n`;
+      if (structure) prompt += `\n输出步骤：\n${structure}\n`;
+      if (constraints) prompt += `\n注意：${constraints}\n`;
+      if (examples) prompt += `\n示例：${examples}\n`;
+      break;
+
+    case 'gemini':
+      prompt += `Task: ${problem}\n`;
+      if (role) prompt += `\nRole: ${role}\n`;
+      if (audience) prompt += `Audience: ${audience}\n`;
+      if (structure) prompt += `\nOutput requirements:\n${structure}\n`;
+      if (constraints) prompt += `Constraints: ${constraints}\n`;
+      break;
+
+    default: // general
+      if (role) prompt += `你是${role}。\n\n`;
+      prompt += `任务：${problem}\n`;
+      if (audience) prompt += `\n受众：${audience}\n`;
+      if (structure) prompt += `\n输出格式：\n${structure}\n`;
+      if (constraints) prompt += `\n要求：${constraints}\n`;
+      if (examples) prompt += `\n示例参考：${examples}\n`;
+  }
+
+  STATE.currentOutput = prompt;
+  document.getElementById('outputContent').textContent = prompt;
+  showToast('✅ 提示词已生成');
+}
+
+// ============================================================
+// Output actions
+// ============================================================
+function copyOutput() {
+  const text = document.getElementById('outputContent').textContent;
+  if (!text) {
+    showToast('⚠️ 没有可复制的内容');
+    return;
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('✅ 已复制到剪贴板');
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('✅ 已复制到剪贴板');
+  });
+}
+
+function clearOutput() {
+  document.getElementById('outputContent').textContent = '';
+  STATE.currentOutput = '';
+}
+
+// ============================================================
+// History
+// ============================================================
+function saveToHistory() {
+  const text = document.getElementById('outputContent').textContent;
+  if (!text) {
+    showToast('⚠️ 没有可保存的内容');
+    return;
+  }
+  STATE.history.unshift({
+    id: Date.now(),
+    time: new Date().toLocaleString('zh-CN'),
+    preview: text.substring(0, 80) + (text.length > 80 ? '...' : ''),
+    content: text,
+  });
+  // Keep max 50 items
+  if (STATE.history.length > 50) STATE.history = STATE.history.slice(0, 50);
+  persistHistory();
+  showToast('💾 已保存到历史');
+}
+
+function loadHistory() {
+  const saved = localStorage.getItem('pt_history');
+  if (saved) {
+    try { STATE.history = JSON.parse(saved); } catch(e) { STATE.history = []; }
+  }
+}
+
+function persistHistory() {
+  localStorage.setItem('pt_history', JSON.stringify(STATE.history));
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (STATE.history.length === 0) {
+    list.innerHTML = '<div class="history-empty">还没有保存的记录</div>';
+    return;
+  }
+  list.innerHTML = STATE.history.map(h => `
+    <div class="history-item" onclick="loadHistoryItem(${h.id})">
+      <div class="time">${h.time}</div>
+      <div class="preview">${escapeHtml(h.preview)}</div>
+    </div>
+  `).join('');
+}
+
+function loadHistoryItem(id) {
+  const item = STATE.history.find(h => h.id === id);
+  if (item) {
+    STATE.currentOutput = item.content;
+    document.getElementById('outputContent').textContent = item.content;
+    switchTab('ai');
+    showToast('📋 已加载历史记录');
+  }
+}
+
+function clearHistory() {
+  if (confirm('确定要清除全部历史记录吗？此操作不可恢复。')) {
+    STATE.history = [];
+    persistHistory();
+    renderHistory();
+    showToast('🗑️ 历史已清除');
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ============================================================
+// Toast
+// ============================================================
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 2000);
+}
+
+// ============================================================
+// Keyboard shortcuts
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    sendMessage();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    toggleSettings();
+  }
+});
+
+// ============================================================
+// Auto-resize textarea
+// ============================================================
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'chatInput') {
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+  }
+});
+
+// ============================================================
+// Start
+// ============================================================
+init();
+</script>
+
+</body>
+</html>
