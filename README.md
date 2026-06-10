@@ -38,7 +38,7 @@
 5. 一键复制，粘贴到任何 AI 工具
 ```
 
-**离线使用**：下载 `prompt-translator-web/index.html`，双击打开，手动模式不需要 API Key。
+**离线使用**：下载 `docs/index.html`，双击打开，手动模式不需要 API Key。
 
 ### Agent Skill（Claude Code 用户）
 
@@ -60,7 +60,7 @@ prompt-translator/
 ├── LICENSE                             # MIT License
 ├── .gitignore
 │
-├── prompt-translator-web/              # 🌐 Web 应用（单文件，零依赖）
+├── docs/                               # 🌐 Web 应用（GitHub Pages 托管）
 │   ├── index.html                      #   完整应用（1214行，含CSS+JS）
 │   └── README.md                       #   部署和使用说明
 │
@@ -139,10 +139,10 @@ git clone https://github.com/leauv121/prompt-translator.git
 cd prompt-translator
 
 # Web 应用 — 直接打开
-open prompt-translator-web/index.html
+open docs/index.html
 
 # 或用本地服务器
-cd prompt-translator-web
+cd docs
 python3 -m http.server 8080
 # 访问 http://localhost:8080
 
@@ -198,7 +198,7 @@ Agent Skill 完全离线可用（本身就是本地插件）。
 
 最简单：发网址 `https://leauv121.github.io/prompt-translator/`
 
-或发 `prompt-translator-web/index.html` 文件，对方保存后双击打开。
+或发 `docs/index.html` 文件，对方保存后双击打开。
 </details>
 
 ---
